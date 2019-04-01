@@ -9,6 +9,6 @@ namespace MarsRover.PictureLibrary.Interfaces
 {
     public interface IPictureRepository
     {
-        Task<PictureDTO> GetPictureAsync(string date, int pictureNo,CancellationToken cancelToken);
+        Task<PictureDTO> GetPictureAsync(string date, int pictureNo,CancellationToken cancelToken);   
     }
 }

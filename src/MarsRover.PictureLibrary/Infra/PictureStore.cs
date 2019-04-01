@@ -1,6 +1,8 @@
 ﻿using MarsRover.PictureLibrary.Interfaces;
+using MarsRover.PictureLibrary.Options;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,37 +15,30 @@ namespace MarsRover.PictureLibrary.Infra
 {
     public class PictureStore : IPictureStore
     {
-        private readonly string _folderPath = "client-app/public/assets/photos";
-        private readonly IFileProvider _fileProvider;
+        private readonly ImageStoreOptions _options;
         private readonly HttpClient _httpClient;
-        private readonly IHostingEnvironment _hostingEnvironment;
-
-        public PictureStore(IFileProvider fileProvider, HttpClient httpClient,IHostingEnvironment hostingEnvironment)
+        public PictureStore(IOptions<ImageStoreOptions> options, HttpClient httpClient)
         {
-            _fileProvider = fileProvider;
+            _options = options.Value;
             _httpClient = httpClient;
         }
 
-        public bool CheckExists(long id, out string localPath)
+        public bool CheckExists(long id,string remotePath, out string localPath)
         {
             localPath = null;
-            var contents = _fileProvider.GetDirectoryContents(_folderPath);
+            var contents = _options.FileProvider.GetDirectoryContents(_options.ImageStoragePath);
             if (contents == null)
                 return false;
 
-            var files = contents.ToList();
-            if (files?.Count == 0)
-                return false;
-
-            var file = files.First(f => f.Name.StartsWith(id.ToString()));
-            if (file?.Exists == true)
+            var fileExtn = remotePath.Substring(remotePath.LastIndexOf("."));
+            var filePath = Path.Combine(_options.ImageStoragePath, id + fileExtn);
+            var fileInfo = _options.FileProvider.GetFileInfo(filePath);
+            if (fileInfo != null && fileInfo.Exists)
             {
-
-                localPath = file.PhysicalPath;
+                localPath = fileInfo.PhysicalPath;
                 return true;
             }
             return false;
-
         }
 
         public async Task<string> StorePictureAsync(long id, string remotePath,CancellationToken cancelToken)
@@ -52,15 +47,15 @@ namespace MarsRover.PictureLibrary.Infra
             response.EnsureSuccessStatusCode();
 
             var fileExtn = remotePath.Substring(remotePath.LastIndexOf("."));
-            var filePath = _folderPath + "/" + id + fileExtn;
-            var fileInfo = _fileProvider.GetFileInfo(filePath);
+            var filePath = Path.Combine(_options.ImageStoragePath, id + fileExtn);
+            var fileInfo = _options.FileProvider.GetFileInfo(filePath);
 
             var photoBytes = await response.Content.ReadAsByteArrayAsync();            
             using(var file = System.IO.File.Create(fileInfo.PhysicalPath))
             {
                 await file.WriteAsync(photoBytes, 0, photoBytes.Length, cancelToken);
             }
-            fileInfo = _fileProvider.GetFileInfo(filePath);
+            fileInfo = _options.FileProvider.GetFileInfo(filePath);
             return fileInfo.PhysicalPath;
         }
     }

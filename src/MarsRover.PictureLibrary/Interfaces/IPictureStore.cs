@@ -10,7 +10,7 @@ namespace MarsRover.PictureLibrary.Interfaces
     {
         Task<string> StorePictureAsync(long id,string remotePath, CancellationToken cancelToken);
 
-        bool CheckExists(long id, out string localPath);
+        bool CheckExists(long id,string remotePath, out string localPath);
         
     }
 }

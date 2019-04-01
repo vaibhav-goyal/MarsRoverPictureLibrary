@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,8 +52,9 @@ namespace MarsRover.PictureLibrary.Controllers
 
         private string GetVirtualPath(string path)
         {
-            var webrootPath = _hostingEnvironment.WebRootPath;
-            return path;
+            var root = _hostingEnvironment.ContentRootPath;
+            var relativePath =  Path.GetRelativePath(root,path);
+            return relativePath.Replace("\\", "/").Insert(0, "/");            
         }
     }
 }

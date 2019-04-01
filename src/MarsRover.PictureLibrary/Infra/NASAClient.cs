@@ -1,6 +1,7 @@
 ﻿using MarsRover.PictureLibrary.DTOs;
 using MarsRover.PictureLibrary.Interfaces;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,12 +15,13 @@ namespace MarsRover.PictureLibrary.Infra
     {
         private readonly HttpClient _httpClient;
 
-        private readonly string _apiKey = "DEMO_KEY";
+        private readonly string _apiKey;
         private readonly string _basePath = "mars-photos/api/v1/rovers/curiosity/photos";
 
-        public NASAClient(HttpClient httpClient)
+        public NASAClient(HttpClient httpClient,IConfiguration configuration)
         {
             _httpClient = httpClient;
+            _apiKey = configuration["NASAAPIKey"];
         }
 
         public int GetPageSize()

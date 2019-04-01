@@ -1,5 +1,6 @@
 using MarsRover.PictureLibrary.Infra;
 using MarsRover.PictureLibrary.Interfaces;
+using MarsRover.PictureLibrary.Options;
 using MarsRover.PictureLibrary.Repository;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using System;
+using System.IO;
 
 namespace MarsRover.PictureLibrary
 {
@@ -29,14 +31,26 @@ namespace MarsRover.PictureLibrary
         public void ConfigureServices(IServiceCollection services)
         {
             var physicalProvider = _env.ContentRootFileProvider;
-            services.AddSingleton<IFileProvider>(physicalProvider);
+            var datesFilePath = Configuration["ValidDatesFilePath"];
+            services.Configure<DateFileStoreOptions>(o =>
+            {
+                o.FileProvider = physicalProvider;
+                o.FilePath = datesFilePath;
+            });
+
+            services.AddSingleton<IValidDatesProvider, ValidDatesProvider>();
+
+            var storagePath = Configuration["ImageStoragePath"];
+            services.Configure<ImageStoreOptions>(o =>
+            {
+                o.FileProvider = physicalProvider;
+                o.ImageStoragePath = storagePath;
+            });            
 
             services.AddHttpClient<IPictureStore, PictureStore>();
             services.AddHttpClient<INASAClient, NASAClient>(c => 
             {
-                c.BaseAddress = new Uri("https://api.nasa.gov");
-                c.DefaultRequestHeaders.Add("Accept", "application/json");
-                c.DefaultRequestHeaders.Add("User-Agent", "INASAClient");
+                c.BaseAddress = new Uri(Configuration["NASAAPIURL"]);                 
             });           
             services.AddScoped<IPictureRepository, PictureRepository>();
 
@@ -68,6 +82,15 @@ namespace MarsRover.PictureLibrary
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
 
+            var storagePath = Configuration["ImageStoragePath"];
+            Directory.CreateDirectory(storagePath);
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                Path.Combine(Directory.GetCurrentDirectory(), storagePath)),
+                RequestPath = storagePath.Replace("\\", "/").Insert(0, "/")
+            });
+
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
@@ -81,7 +104,8 @@ namespace MarsRover.PictureLibrary
 
                 if (env.IsDevelopment())
                 {
-                    spa.UseReactDevelopmentServer(npmScript: "start");
+                    //spa.UseReactDevelopmentServer(npmScript: "start");
+                    spa.UseProxyToSpaDevelopmentServer("http://localhost:3000");
                 }
             });
         }
